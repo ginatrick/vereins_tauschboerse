@@ -98,11 +98,39 @@ Bis dahin gilt als Workaround: Passwort-Login auf `/login` nutzen (Reiter
 „Passwort") – der ist vom E-Mail-Limit nicht betroffen, da dabei keine
 E-Mail verschickt wird.
 
+## 8. Login-Code in der E-Mail sichtbar machen (behebt „Link klicken tut nichts")
+
+Der Anmelde-Link funktioniert nur zuverlässig, wenn er **im selben
+Browser** geöffnet wird, in dem er auch angefordert wurde (technischer
+Grund: PKCE-Sicherheits-Cookie). Klickst du ihn z.B. aus der Gmail-Web-App
+in einem anderen Tab/Kontext, oder scannt dein E-Mail-Anbieter Links
+automatisch vor (macht z.B. Gmail teils), schlägt die Anmeldung fehl –
+genau das Symptom „E-Mail kommt an, Link ist klickbar, aber ich bin nicht
+eingeloggt".
+
+Als robuste Alternative zeigt `/login` nach dem Anfordern eines
+Anmelde-Links jetzt zusätzlich ein Feld zum Eintippen eines 6-stelligen
+Codes an. Damit das funktioniert, muss die Anmelde-Link-E-Mail diesen Code
+überhaupt enthalten – das ist eine einmalige Einstellung:
+
+1. Supabase-Dashboard → **Authentication → Emails → Templates** →
+   „Magic Link" auswählen.
+2. Im E-Mail-Text irgendwo `{{ .Token }}` ergänzen, z.B.:
+   ```
+   Oder gib diesen Code auf der Anmeldeseite ein: {{ .Token }}
+   ```
+3. Speichern.
+
+Danach zeigt jede neue Anmelde-Link-E-Mail den Code an, und die Anmeldung
+funktioniert unabhängig davon, in welcher App/welchem Browser die E-Mail
+geöffnet wird.
+
 ## Was ist schon fertig?
 
 - Supabase-Client (Browser + Server) – `src/lib/supabase/`
 - Proxy/Session-Refresh – `src/proxy.ts`
-- Anmeldeseite (Magic Link **und** E-Mail/Passwort) – `src/app/login/page.tsx`
+- Anmeldeseite (Magic Link **inkl. Code-Fallback**, und E-Mail/Passwort) –
+  `src/app/login/page.tsx`
 - Konto-Seite zum Passwort festlegen/ändern – `src/app/account/`
 - Abmelden (Header, auf jeder Seite inkl. Startseite) – `src/app/auth/actions.ts`
 - Callback-Route für den Magic-Link-Klick – `src/app/auth/callback/route.ts`

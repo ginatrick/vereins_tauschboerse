@@ -3,7 +3,11 @@
 import { Suspense, useActionState, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { signInWithPassword, type AuthFormState } from './actions'
+import {
+  signInWithPassword,
+  verifyEmailOtp,
+  type AuthFormState,
+} from './actions'
 
 const initialState: AuthFormState = {}
 
@@ -27,6 +31,7 @@ function LoginForm() {
     signInWithPassword,
     initialState
   )
+  const [otpState, otpAction] = useActionState(verifyEmailOtp, initialState)
 
   const handleMagicLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,9 +80,39 @@ function LoginForm() {
 
         {mode === 'magic' ? (
           sent ? (
-            <p className="text-center">
-              Check deine E-Mails – wir haben dir einen Anmelde-Link geschickt.
-            </p>
+            <div className="space-y-4">
+              <p className="text-center">
+                Check deine E-Mails – wir haben dir einen Anmelde-Link
+                geschickt.
+              </p>
+              <div className="border-t border-gray-200 pt-4">
+                <p className="mb-2 text-sm text-gray-600">
+                  Funktioniert der Link nicht (z.B. weil du ihn in einer
+                  anderen App als hier geöffnet hast)? In derselben E-Mail
+                  steht auch ein Code zum Eintippen:
+                </p>
+                <form action={otpAction} className="space-y-3">
+                  <input type="hidden" name="email" value={email} />
+                  <input
+                    type="text"
+                    name="token"
+                    inputMode="numeric"
+                    placeholder="123456"
+                    required
+                    className="w-full rounded border border-gray-300 px-3 py-2"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-black px-3 py-2 text-white"
+                  >
+                    Code bestätigen
+                  </button>
+                  {otpState.error && (
+                    <p className="text-red-600">{otpState.error}</p>
+                  )}
+                </form>
+              </div>
+            </div>
           ) : (
             <form onSubmit={handleMagicLogin} className="space-y-4">
               <input
