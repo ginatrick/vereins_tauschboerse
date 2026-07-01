@@ -34,3 +34,23 @@ export async function rejectListing(formData: FormData) {
 
   revalidatePath('/admin')
 }
+
+export async function adminDeleteListing(formData: FormData) {
+  const { supabase } = await requireAdmin()
+  const listingId = Number(formData.get('listing_id'))
+
+  const { data: images } = await supabase
+    .from('listing_images')
+    .select('storage_path')
+    .eq('listing_id', listingId)
+
+  const paths = (images ?? []).map((image) => image.storage_path)
+  if (paths.length > 0) {
+    await supabase.storage.from('listing-images').remove(paths)
+  }
+
+  await supabase.from('listings').delete().eq('id', listingId)
+
+  revalidatePath('/admin')
+  revalidatePath('/')
+}

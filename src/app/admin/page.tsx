@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { requireAdmin } from '@/lib/auth/require-admin'
-import { approveListing, rejectListing } from './actions'
+import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton'
+import { daysRemainingLabel } from '@/lib/listings/expiry'
+import { approveListing, rejectListing, adminDeleteListing } from './actions'
 
 type ListingRow = {
   id: number
@@ -10,6 +12,7 @@ type ListingRow = {
   condition: string | null
   size: string | null
   price: string | null
+  created_at: string
   categories: { name: string } | null
   profiles: { email: string; name: string | null } | null
 }
@@ -49,7 +52,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   let query = supabase
     .from('listings')
     .select(
-      'id, title, type, status, condition, size, price, categories ( name ), profiles!listings_user_id_fkey ( email, name )'
+      'id, title, type, status, condition, size, price, created_at, categories ( name ), profiles!listings_user_id_fkey ( email, name )'
     )
 
   if (status && ['pending', 'approved', 'rejected'].includes(status)) {
@@ -109,6 +112,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     {TYPE_LABELS[listing.type] ?? listing.type}
                     {listing.categories?.name && ` · ${listing.categories.name}`}
                   </span>
+                  <span className="text-gray-500">
+                    {daysRemainingLabel(listing.created_at)}
+                  </span>
                 </div>
                 <h2 className="font-semibold">{listing.title}</h2>
                 <p className="text-sm text-gray-600">
@@ -126,13 +132,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   </p>
                 )}
               </div>
-              <div className="flex shrink-0 gap-2">
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                 {listing.status !== 'approved' && (
                   <form action={approveListing}>
                     <input type="hidden" name="listing_id" value={listing.id} />
                     <button
                       type="submit"
-                      className="rounded bg-black px-3 py-2 text-sm text-white"
+                      className="w-full rounded bg-black px-3 py-2 text-sm text-white"
                     >
                       Freischalten
                     </button>
@@ -143,12 +149,21 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     <input type="hidden" name="listing_id" value={listing.id} />
                     <button
                       type="submit"
-                      className="rounded border border-gray-300 px-3 py-2 text-sm"
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
                     >
                       {listing.status === 'approved' ? 'Sperren' : 'Ablehnen'}
                     </button>
                   </form>
                 )}
+                <form action={adminDeleteListing}>
+                  <input type="hidden" name="listing_id" value={listing.id} />
+                  <ConfirmSubmitButton
+                    confirmMessage={`Inserat "${listing.title}" wirklich unwiderruflich löschen?`}
+                    className="w-full rounded border border-red-600 px-3 py-2 text-sm text-red-600"
+                  >
+                    Löschen
+                  </ConfirmSubmitButton>
+                </form>
               </div>
             </li>
           ))}

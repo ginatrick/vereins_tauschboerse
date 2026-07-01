@@ -143,6 +143,35 @@ Anmelde-E-Mail (egal ob erste Anmeldung oder wiederkehrend) den Code an,
 und die Anmeldung funktioniert unabhängig davon, in welcher App/welchem
 Browser die E-Mail geöffnet wird.
 
+## 9. Automatisches Löschen alter Inserate (90 Tage) einrichten
+
+Jedes Inserat wird 90 Tage nach Erstellung automatisch gelöscht (Bilder
+inklusive), damit die Datenbank nicht unbegrenzt wächst. Wie viele Tage ein
+Inserat noch sichtbar ist, steht direkt in der Übersicht, der Detailseite,
+„Meine Inserate" und im Admin-Bereich.
+
+Das Löschen übernimmt ein täglicher **Vercel Cron Job**
+(`vercel.json` → `/api/cron/expire-listings`, läuft nachts um 3 Uhr UTC).
+Damit dieser Endpunkt nicht von außen missbraucht werden kann, braucht er
+ein Geheimnis:
+
+1. Ein zufälliges Secret erzeugen (mind. 16 Zeichen), z.B. mit einem
+   Passwort-Generator.
+2. Im Vercel-Projekt → **Settings → Environment Variables** eine neue
+   Variable `CRON_SECRET` mit diesem Wert anlegen (für „Production").
+3. Neu deployen (oder einmal redeployen), damit die Variable greift.
+
+Vercel schickt diesen Wert automatisch als `Authorization: Bearer ...`
+Header mit, wenn der Cron-Job ausgelöst wird – das übernimmt Vercel
+komplett automatisch, dafür muss nichts weiter konfiguriert werden.
+
+Lokal zum Testen liegt in `.env.local` bereits ein `CRON_SECRET` (zufällig
+erzeugt); den Endpunkt kannst du lokal so aufrufen:
+
+```bash
+curl -H "Authorization: Bearer <dein-CRON_SECRET>" http://localhost:3000/api/cron/expire-listings
+```
+
 ## Was ist schon fertig?
 
 - Supabase-Client (Browser + Server) – `src/lib/supabase/`
@@ -161,11 +190,14 @@ Browser die E-Mail geöffnet wird.
   Telefonnummer erst nach Klick sichtbar (Spam-Schutz) –
   `src/app/listings/[id]/`
 - Admin-Bereich: alle Inserate (Filter nach Status), Freischalten/Ablehnen/
-  Sperren – `src/app/admin/`
+  Sperren/Löschen – `src/app/admin/`
 - Admin-Nutzerverwaltung: Nutzer sperren/entsperren/löschen (inkl. Account
   und Storage-Aufräumen) – `src/app/admin/users/`
 - „Meine Inserate"-Bereich: eigene Inserate bearbeiten, löschen, als
   reserviert markieren – `src/app/listings/mine/`, `src/app/listings/[id]/edit/`
+- 90-Tage-Laufzeit je Inserat mit Restlaufzeit-Anzeige überall, automatisches
+  Löschen per täglichem Vercel Cron Job – `src/lib/listings/expiry.ts`,
+  `src/app/api/cron/expire-listings/`
 - Vereinslogo im Header – `public/logo.png`, `src/components/Header.tsx`
 
 ## Was fehlt noch (nächste Schritte)
