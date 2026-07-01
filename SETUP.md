@@ -113,17 +113,35 @@ Anmelde-Links jetzt zusätzlich ein Feld zum Eintippen eines 6-stelligen
 Codes an. Damit das funktioniert, muss die Anmelde-Link-E-Mail diesen Code
 überhaupt enthalten – das ist eine einmalige Einstellung:
 
-1. Supabase-Dashboard → **Authentication → Emails → Templates** →
-   „Magic Link" auswählen.
-2. Im E-Mail-Text irgendwo `{{ .Token }}` ergänzen, z.B.:
-   ```
-   Oder gib diesen Code auf der Anmeldeseite ein: {{ .Token }}
-   ```
-3. Speichern.
+Die Standard-Vorlagen von Supabase enthalten `{{ .Token }}` **nicht** von
+Haus aus – das muss manuell ergänzt werden, und zwar in zwei Vorlagen
+(je nachdem ob es die erste Anmeldung eines Kontos ist oder nicht, verschickt
+Supabase unterschiedliche Vorlagen).
 
-Danach zeigt jede neue Anmelde-Link-E-Mail den Code an, und die Anmeldung
-funktioniert unabhängig davon, in welcher App/welchem Browser die E-Mail
-geöffnet wird.
+Supabase-Dashboard → **Authentication → Emails → Templates**:
+
+**Vorlage „Magic Link"** – kompletten Inhalt ersetzen durch:
+
+```html
+<h2>Dein Anmelde-Link</h2>
+<p>Klicke auf den Link, um dich anzumelden. Der Link ist nur kurze Zeit gültig und kann nur einmal verwendet werden.</p>
+<p><a href="{{ .ConfirmationURL }}">Jetzt anmelden</a></p>
+<p>Falls der Link nicht funktioniert, gib stattdessen diesen Code auf der Anmeldeseite ein: <strong>{{ .Token }}</strong></p>
+```
+
+**Vorlage „Confirm signup"** – kompletten Inhalt ersetzen durch:
+
+```html
+<h2>E-Mail-Adresse bestätigen</h2>
+<p>Klicke auf den Link, um deine E-Mail-Adresse zu bestätigen und dich anzumelden.</p>
+<p><a href="{{ .ConfirmationURL }}">E-Mail bestätigen</a></p>
+<p>Falls der Link nicht funktioniert, gib stattdessen diesen Code auf der Anmeldeseite ein: <strong>{{ .Token }}</strong></p>
+```
+
+Beide Vorlagen jeweils mit „Save" speichern. Danach zeigt jede neue
+Anmelde-E-Mail (egal ob erste Anmeldung oder wiederkehrend) den Code an,
+und die Anmeldung funktioniert unabhängig davon, in welcher App/welchem
+Browser die E-Mail geöffnet wird.
 
 ## Was ist schon fertig?
 
