@@ -1,4 +1,4 @@
-# Tauschbörse – FC Steinbach-Hallenberg e.V.
+# Tauschbörse 
 
 Interne Tauschbörse für Vereinsmitglieder zum Anbieten und Suchen von
 gebrauchter Fußball-Ausrüstung (Schuhe, Trikots, Schienbeinschoner, Bälle
