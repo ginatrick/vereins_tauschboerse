@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PhoneReveal } from './PhoneReveal'
+import { daysRemainingLabel } from '@/lib/listings/expiry'
 
 type ListingDetailRow = {
   id: number
@@ -13,6 +14,7 @@ type ListingDetailRow = {
   price: string | null
   phone: string | null
   is_reserved: boolean
+  created_at: string
   categories: { name: string } | null
   profiles: { email: string } | null
   listing_images: { storage_path: string; sort_order: number }[]
@@ -46,7 +48,7 @@ export default async function ListingDetailPage({
   const { data: listing } = await supabase
     .from('listings')
     .select(
-      'id, title, description, type, condition, size, price, phone, is_reserved, categories ( name ), profiles!listings_user_id_fkey ( email ), listing_images ( storage_path, sort_order )'
+      'id, title, description, type, condition, size, price, phone, is_reserved, created_at, categories ( name ), profiles!listings_user_id_fkey ( email ), listing_images ( storage_path, sort_order )'
     )
     .eq('id', listingId)
     .single()
@@ -126,10 +128,14 @@ export default async function ListingDetailPage({
       )}
 
       {listing.description && (
-        <p className="mb-6 whitespace-pre-wrap text-gray-700">
+        <p className="mb-2 whitespace-pre-wrap text-gray-700">
           {listing.description}
         </p>
       )}
+
+      <p className="mb-6 text-xs text-gray-400">
+        {daysRemainingLabel(listing.created_at)}
+      </p>
 
       <div className="flex flex-wrap gap-2">
         {email && (

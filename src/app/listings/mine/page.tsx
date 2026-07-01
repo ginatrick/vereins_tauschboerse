@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { daysRemainingLabel } from '@/lib/listings/expiry'
 import { deleteListing, toggleReserved } from './actions'
 import { DeleteButton } from './DeleteButton'
 
@@ -11,6 +12,7 @@ type MyListingRow = {
   status: 'pending' | 'approved' | 'rejected'
   is_reserved: boolean
   price: string | null
+  created_at: string
   categories: { name: string } | null
   listing_images: { storage_path: string; sort_order: number }[]
 }
@@ -40,7 +42,7 @@ export default async function MyListingsPage() {
   const { data: listings, error } = await supabase
     .from('listings')
     .select(
-      'id, title, type, status, is_reserved, price, categories ( name ), listing_images ( storage_path, sort_order )'
+      'id, title, type, status, is_reserved, price, created_at, categories ( name ), listing_images ( storage_path, sort_order )'
     )
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
@@ -110,6 +112,9 @@ export default async function MyListingsPage() {
                   {listing.price && (
                     <p className="text-sm text-gray-600">{listing.price}</p>
                   )}
+                  <p className="text-xs text-gray-400">
+                    {daysRemainingLabel(listing.created_at)}
+                  </p>
                 </div>
                 <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
                   <Link

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { SHOE_SIZES, CLOTHING_SIZES } from '@/lib/listings/validation'
+import { daysRemainingLabel } from '@/lib/listings/expiry'
 
 type ListingRow = {
   id: number
@@ -12,6 +13,7 @@ type ListingRow = {
   price: string | null
   phone: string | null
   is_reserved: boolean
+  created_at: string
   categories: { name: string } | null
   profiles: { email: string } | null
   listing_images: { storage_path: string; sort_order: number }[]
@@ -53,7 +55,7 @@ export default async function Home({ searchParams }: HomeProps) {
   let query = supabase
     .from('listings')
     .select(
-      'id, title, description, type, condition, size, price, phone, is_reserved, categories ( name ), profiles!listings_user_id_fkey ( email ), listing_images ( storage_path, sort_order )'
+      'id, title, description, type, condition, size, price, phone, is_reserved, created_at, categories ( name ), profiles!listings_user_id_fkey ( email ), listing_images ( storage_path, sort_order )'
     )
     .eq('status', 'approved')
 
@@ -259,6 +261,9 @@ export default async function Home({ searchParams }: HomeProps) {
                       {listing.phone && (
                         <p className="text-gray-500">Telefonnummer verfügbar</p>
                       )}
+                      <p className="text-xs text-gray-400">
+                        {daysRemainingLabel(listing.created_at)}
+                      </p>
                     </div>
                   </div>
                 </Link>
