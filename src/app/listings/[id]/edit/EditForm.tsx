@@ -2,12 +2,25 @@
 
 import { useActionState, useState, type ChangeEvent } from 'react'
 import { useFormStatus } from 'react-dom'
-import { createListing, type ListingFormState } from './actions'
+import { updateListing, type ListingFormState } from './actions'
 import { getSizeOptionsForSlug } from '@/lib/listings/validation'
 
 const initialState: ListingFormState = {}
 
 type Category = { id: number; name: string; slug: string }
+type ExistingImage = { id: number; url: string | null }
+
+type Listing = {
+  id: number
+  title: string
+  description: string | null
+  type: 'angebot' | 'gesuch'
+  category_id: number
+  condition: string | null
+  size: string | null
+  price: string | null
+  phone: string | null
+}
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -18,15 +31,31 @@ function SubmitButton() {
       disabled={pending}
       className="w-full rounded bg-black px-3 py-2 text-white disabled:opacity-50"
     >
-      {pending ? 'Wird gespeichert…' : 'Inserat einreichen'}
+      {pending ? 'Wird gespeichert…' : 'Änderungen speichern'}
     </button>
   )
 }
 
-export function ListingForm({ categories }: { categories: Category[] }) {
-  const [state, formAction] = useActionState(createListing, initialState)
+export function EditForm({
+  listing,
+  categories,
+  images,
+}: {
+  listing: Listing
+  categories: Category[]
+  images: ExistingImage[]
+}) {
+  const updateListingWithId = updateListing.bind(null, listing.id)
+  const [state, formAction] = useActionState(updateListingWithId, initialState)
+  const [removedIds, setRemovedIds] = useState<number[]>([])
   const [previews, setPreviews] = useState<string[]>([])
-  const [categoryId, setCategoryId] = useState('')
+  const [categoryId, setCategoryId] = useState(String(listing.category_id))
+
+  function toggleRemove(id: number) {
+    setRemovedIds((prev) =>
+      prev.includes(id) ? prev.filter((existingId) => existingId !== id) : [...prev, id]
+    )
+  }
 
   function handleFilesChange(e: ChangeEvent<HTMLInputElement>) {
     previews.forEach((url) => URL.revokeObjectURL(url))
@@ -38,6 +67,8 @@ export function ListingForm({ categories }: { categories: Category[] }) {
     (category) => String(category.id) === categoryId
   )
   const sizeOptions = getSizeOptionsForSlug(selectedCategory?.slug)
+  const sizeDefault =
+    categoryId === String(listing.category_id) ? listing.size ?? '' : ''
 
   return (
     <form action={formAction} className="space-y-5">
@@ -50,6 +81,7 @@ export function ListingForm({ categories }: { categories: Category[] }) {
           name="title"
           required
           maxLength={120}
+          defaultValue={listing.title}
           className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
         />
       </div>
@@ -62,12 +94,9 @@ export function ListingForm({ categories }: { categories: Category[] }) {
           id="type"
           name="type"
           required
-          defaultValue=""
+          defaultValue={listing.type}
           className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
         >
-          <option value="" disabled>
-            Bitte wählen
-          </option>
           <option value="angebot">Angebot</option>
           <option value="gesuch">Gesuch</option>
         </select>
@@ -85,9 +114,6 @@ export function ListingForm({ categories }: { categories: Category[] }) {
           onChange={(e) => setCategoryId(e.target.value)}
           className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
         >
-          <option value="" disabled>
-            Bitte wählen
-          </option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
@@ -104,6 +130,7 @@ export function ListingForm({ categories }: { categories: Category[] }) {
           id="description"
           name="description"
           rows={4}
+          defaultValue={listing.description ?? ''}
           className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
         />
       </div>
@@ -116,7 +143,7 @@ export function ListingForm({ categories }: { categories: Category[] }) {
           <select
             id="condition"
             name="condition"
-            defaultValue=""
+            defaultValue={listing.condition ?? ''}
             className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
           >
             <option value="">–</option>
@@ -134,7 +161,7 @@ export function ListingForm({ categories }: { categories: Category[] }) {
             id="size"
             name="size"
             disabled={sizeOptions.length === 0}
-            defaultValue=""
+            defaultValue={sizeDefault}
             className="mt-1 w-full rounded border border-gray-300 px-3 py-2 disabled:bg-gray-100 disabled:text-gray-400"
           >
             <option value="">–</option>
@@ -154,6 +181,7 @@ export function ListingForm({ categories }: { categories: Category[] }) {
         <input
           id="price"
           name="price"
+          defaultValue={listing.price ?? ''}
           placeholder="z.B. 10 EUR, VB, gegen Spende"
           className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
         />
@@ -167,14 +195,48 @@ export function ListingForm({ categories }: { categories: Category[] }) {
           id="phone"
           name="phone"
           type="tel"
+          defaultValue={listing.phone ?? ''}
           placeholder="z.B. 0151 23456789"
           className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
         />
       </div>
 
+      {images.length > 0 && (
+        <div>
+          <p className="block text-sm font-medium">Vorhandene Bilder</p>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {images.map((image) => (
+              <label key={image.id} className="relative cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="remove_images"
+                  value={image.id}
+                  checked={removedIds.includes(image.id)}
+                  onChange={() => toggleRemove(image.id)}
+                  className="absolute right-1 top-1 z-10 h-4 w-4"
+                />
+                {image.url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={image.url}
+                    alt=""
+                    className={`h-20 w-20 rounded object-cover ${
+                      removedIds.includes(image.id) ? 'opacity-30' : ''
+                    }`}
+                  />
+                )}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Zum Löschen ankreuzen
+          </p>
+        </div>
+      )}
+
       <div>
         <label htmlFor="images" className="block text-sm font-medium">
-          Bilder (max. 5, je max. 4 MB)
+          Neue Bilder hinzufügen (insgesamt max. 5, je max. 4 MB)
         </label>
         <input
           id="images"

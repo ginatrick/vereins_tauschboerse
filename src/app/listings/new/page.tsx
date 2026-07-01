@@ -14,7 +14,7 @@ export default async function NewListingPage() {
 
   const { data: categories } = await supabase
     .from('categories')
-    .select('id, name')
+    .select('id, name, slug')
     .order('name')
 
   return (

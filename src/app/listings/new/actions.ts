@@ -2,11 +2,11 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-
-const MAX_IMAGES = 5
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024 // 4 MB
-const VALID_TYPES = ['angebot', 'gesuch']
-const VALID_CONDITIONS = ['neu', 'gut', 'gebraucht']
+import {
+  parseListingFields,
+  validateListingFields,
+  validateImages,
+} from '@/lib/listings/validation'
 
 export type ListingFormState = {
   error?: string
@@ -25,54 +25,40 @@ export async function createListing(
     redirect('/login')
   }
 
-  const title = String(formData.get('title') ?? '').trim()
-  const description = String(formData.get('description') ?? '').trim()
-  const type = String(formData.get('type') ?? '')
-  const categoryId = Number(formData.get('category_id'))
-  const condition = String(formData.get('condition') ?? '').trim() || null
-  const size = String(formData.get('size') ?? '').trim() || null
-  const price = String(formData.get('price') ?? '').trim() || null
+  const fields = parseListingFields(formData)
 
-  if (!title || title.length > 120) {
-    return { error: 'Bitte einen Titel angeben (max. 120 Zeichen).' }
-  }
-  if (!VALID_TYPES.includes(type)) {
-    return { error: 'Bitte „Angebot" oder „Gesuch" auswählen.' }
-  }
-  if (!Number.isInteger(categoryId) || categoryId <= 0) {
-    return { error: 'Bitte eine Kategorie auswählen.' }
-  }
-  if (condition && !VALID_CONDITIONS.includes(condition)) {
-    return { error: 'Ungültiger Zustand.' }
+  const { data: category } = await supabase
+    .from('categories')
+    .select('slug')
+    .eq('id', fields.categoryId)
+    .single()
+
+  const fieldError = validateListingFields(fields, category?.slug ?? null)
+  if (fieldError) {
+    return { error: fieldError }
   }
 
   const images = formData
     .getAll('images')
     .filter((entry): entry is File => entry instanceof File && entry.size > 0)
 
-  if (images.length > MAX_IMAGES) {
-    return { error: `Bitte höchstens ${MAX_IMAGES} Bilder hochladen.` }
-  }
-  for (const image of images) {
-    if (!image.type.startsWith('image/')) {
-      return { error: `„${image.name}" ist kein Bild.` }
-    }
-    if (image.size > MAX_IMAGE_BYTES) {
-      return { error: `„${image.name}" ist größer als 4 MB.` }
-    }
+  const imageError = validateImages(images)
+  if (imageError) {
+    return { error: imageError }
   }
 
   const { data: listing, error: insertError } = await supabase
     .from('listings')
     .insert({
       user_id: user.id,
-      category_id: categoryId,
-      title,
-      description: description || null,
-      type,
-      condition,
-      size,
-      price,
+      category_id: fields.categoryId,
+      title: fields.title,
+      description: fields.description,
+      type: fields.type,
+      condition: fields.condition,
+      size: fields.size,
+      price: fields.price,
+      phone: fields.phone,
     })
     .select('id')
     .single()
